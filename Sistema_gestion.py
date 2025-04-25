@@ -136,6 +136,12 @@ class Asiento(Unidad):
         self.estado = str
         return True
 
+    def ver_estado(self):
+        return self.estado
+
+    def ver_numero(self):
+        return self.numero
+
 
 class Venta:
     def __init__(self):
@@ -198,6 +204,46 @@ def mostrar_servicio(servicio: Servicio, numero: int):
         print(f"   - Parada {i + 1}: {ciudad.ver_nombre()}")
     print("")
 
+
+def seleccionar_servicio(servicios: List[Servicio]) -> Servicio:
+    print("Servicios disponibles:\n")
+    for i, servicio in enumerate(servicios, start=1):
+        mostrar_servicio(servicio, i)
+
+    while True:
+        try:
+            seleccion = int(input(f"Seleccione un servicio (1-{len(servicios)}): "))
+            if 1 <= seleccion <= len(servicios):
+                return servicios[seleccion - 1]
+            else:
+                print("Número fuera de rango.")
+        except ValueError:
+            print("Entrada inválida. Ingrese un número.")
+
+def mostrar_asientos(unidad: Unidad):
+    print("Estado de los asientos:\n")
+    for asiento in unidad.ver_asientos():
+        estado = asiento.ver_estado().capitalize()
+        print(f"Asiento {asiento.ver_numero():02d}: {estado}")
+
+def reservar_asiento(servicio: Servicio, pasajero: Pasajero, nro_asiento: int):
+    unidad = servicio.ver_unidad()
+    asientos = unidad.ver_asientos()
+
+    if nro_asiento < 1 or nro_asiento > len(asientos):
+        print(f"Asiento inválido. Debe estar entre 1 y {len(asientos)}.")
+        return
+
+    asiento = asientos[nro_asiento - 1]
+
+    if asiento.ver_estado() != "libre":
+        print(f"Error: El asiento {nro_asiento} no está disponible.")
+        return
+
+    asiento._cambiar_estado_asiento("reservado")
+    reserva = Reserva(pasajero, asiento)
+    print(f"Reserva realizada: Pasajero {pasajero.nombre}, asiento {nro_asiento}, servicio del {servicio.ver_fecha_partida().strftime('%d/%m/%Y')}")
+
 # Provincias
 santa_fe = Provincia(1, "Santa Fe")
 cordoba = Provincia(2, "Córdoba")
@@ -205,6 +251,16 @@ buenos_aires = Provincia(3, "Buenos Aires")
 mendoza = Provincia(4, "Mendoza")
 salta = Provincia(5, "Salta")
 neuquen = Provincia(6, "Neuquén")
+
+
+# Provincias
+santa_fe = Provincia(1, "Santa Fe")
+cordoba = Provincia(2, "Córdoba")
+buenos_aires = Provincia(3, "Buenos Aires")
+mendoza = Provincia(4, "Mendoza")
+salta = Provincia(5, "Salta")
+neuquen = Provincia(6, "Neuquén")
+
 
 #Ciudades
 santa_fe_capital = Ciudad(3000, "Santa Fe", santa_fe)
@@ -294,4 +350,26 @@ servicio4 = Servicio(
 mostrar_servicio(servicio1, 1)
 mostrar_servicio(servicio2, 2)
 mostrar_servicio(servicio3, 3)
+
 mostrar_servicio(servicio4, 4)
+
+mostrar_servicio(servicio4, 4)
+
+#Seleccionar servivico
+servicios = [servicio1, servicio2, servicio3, servicio4]
+servicio_seleccionado = seleccionar_servicio(servicios)
+
+#Mostrar asientos
+mostrar_asientos(servicio_seleccionado.ver_unidad())
+
+# Crear un pasajero
+pasajero1 = Pasajero("Larocca Ignacio", "laroccanacho@gmail.com", "45338215")
+
+# Reserva asiento
+asiento = int(input("Seleccione un asiento : "))
+reservar_asiento(servicio_seleccionado, pasajero1, asiento)
+mostrar_asientos(servicio_seleccionado.ver_unidad())
+
+#Numero inválido
+reservar_asiento(servicio_seleccionado, pasajero1, 99)
+
