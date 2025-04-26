@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import datetime
 from typing import List
-
+from datetime import date
 
 class Patente:
     _patentes_asignadas = set()
@@ -55,6 +55,8 @@ class Ciudad:
     def ver_nombre(self):
         return self.nombre
 
+   
+    
     def ver_cod_ciudad(self):
         return self.cod_ciudad
 
@@ -78,6 +80,8 @@ class Itinerario:
     def eliminar_parada(self, nro_parada: int):
         self.ciudades.pop(nro_parada)
         return self.ciudades
+    def ver_ciudad_destino(self):
+        return self.ciudad_destino
 
 
 class Servicio:
@@ -144,11 +148,48 @@ class Asiento(Unidad):
 
 
 class Venta:
+    def __init__(self, fecha_venta, monto,localidad_destino,medio_pago):
+        self.fecha_venta = fecha_venta
+        self.monto=monto
+        self.localidad_destino =localidad_destino
+        self.medio_pago=medio_pago
+        
+
+class Ventas:
     def __init__(self):
-        self.fecha_venta = datetime.datetime.now().date()
-        self.hora_venta = datetime.datetime.now().time()
+        self.lista_ventas: List[Venta] = []
 
+    def agregar_venta(self,venta: Venta):
+       self.lista_ventas.append(venta)
 
+    def generar_informe (self, desde:datetime.date, hasta:datetime.date):
+        monto_total =0
+        viajes_por_localidad= {}
+        pagos_por_medio = {}
+        for venta in self.lista_ventas:
+            if desde<=venta.fecha_venta<=hasta:
+                monto_total+=venta.monto
+
+                if venta.localidad_destino in viajes_por_localidad:
+                    viajes_por_localidad[venta.localidad_destino]+=1
+                else:
+                    viajes_por_localidad[venta.localidad_destino]=1
+                
+                if venta.medio_pago in pagos_por_medio:
+                    pagos_por_medio[venta.medio_pago]+=1
+                else:
+                    pagos_por_medio[venta.medio_pago]=1
+
+        print("--Informe de ventas--")
+        print(f"Período: {desde} hasta {hasta}")
+        print(f"Monto total facturdado: {monto_total} $")
+        print("Cantidad de viajes por destino: ")
+        for local,cantidad in viajes_por_localidad.items():
+            print(f"{local}:{cantidad} viaje/s")
+        print("Cantidad de pagos por medio de pago: ")
+        for medio,cant in pagos_por_medio.items():
+            print(f"{medio}:{cant} pago/s")
+        
 class Reserva:
     def __init__(self, pasajero, asiento):
         self.pasajero = pasajero
@@ -165,7 +206,7 @@ class Pasajero:
 
 
 class MedioPago(ABC):
-    # @abstractmethod
+    @abstractmethod
     def _realizarpago():
         pass
 
@@ -176,19 +217,28 @@ class TarjetaCredito(MedioPago):
         self.dni_titular = dni_titular
         self.nombre_titular = nombre_titular
         self.fecha_vencimiento = fecha_vencimiento
-
+    def _realizarpago(self):
+         print("Pago realizado con Tarjeta de Crédito")
+    def __str__(self):
+        return f"TarjetaCredito"
 
 class MercadoPago(MedioPago):
     def __init__(self, email, celular):
         self.email = email
         self.celuar = celular
-
+    def _realizarpago(self):
+            print("Pago realizado con Mercado Pago")
+    def __str__(self):
+        return f"Mercadopago"
 
 class Uala(MedioPago):
     def __init__(self, email, nombre_titular):
         self.nombre_titular = nombre_titular
         self.email = email
-
+    def _realizarpago(self):
+        print("Pago realizado con Ualá")
+    def __str__(self):
+        return f"Uala"
 def mostrar_servicio(servicio: Servicio, numero: int):
     print(f"--- Servicio {numero} ---")
     print(f"Unidad: {servicio.ver_unidad().ver_patente()}")
@@ -205,10 +255,11 @@ def mostrar_servicio(servicio: Servicio, numero: int):
     print("")
 
 
-def seleccionar_servicio(servicios: List[Servicio]) -> Servicio:
+def seleccionar_servicio(servicios: List[Servicio], ventas:Ventas) -> Servicio:
     print("Servicios disponibles:\n")
     for i, servicio in enumerate(servicios, start=1):
         mostrar_servicio(servicio, i)
+
 
     while True:
         try:
@@ -220,6 +271,7 @@ def seleccionar_servicio(servicios: List[Servicio]) -> Servicio:
         except ValueError:
             print("Entrada inválida. Ingrese un número.")
 
+        
 def mostrar_asientos(unidad: Unidad):
     print("Estado de los asientos:\n")
     for asiento in unidad.ver_asientos():
@@ -234,15 +286,46 @@ def reservar_asiento(servicio: Servicio, pasajero: Pasajero, nro_asiento: int):
         print(f"Asiento inválido. Debe estar entre 1 y {len(asientos)}.")
         return
 
-    asiento = asientos[nro_asiento - 1]
+    print("Métodos de pagos disponibles: Uala - TarjetaCredito - MercadoPago")
+    metodo_pago = input("Escriba su metodo de pago: ")
+    medio_pago = None
+    if metodo_pago == "Uala":
+        email = pasajero.email
+        nombre = pasajero.nombre
+        medio_pago = Uala(email,nombre)
+    elif metodo_pago == "TarjetaCredito":
+        numero_tar = input("Ingrese numero de la tarjeta")
+        dni = pasajero.dni
+        nombre = pasajero.nombre
+        vencimiento = input("Ingrese vencimiento de la tarjeta")
+        medio_pago =TarjetaCredito(numero_tar,dni,nombre,vencimiento)
+    elif metodo_pago == "MercadoPago":
+        email = pasajero.email
+        celular= input("Ingrese su celular")
+        medio_pago = MercadoPago(email,celular)
+    else:
+            print("Método de pago inválido")
+            return
+    medio_pago._realizarpago()
+    servicios=servicio
+    monto = servicios.ver_precio()
+    localidad = servicios.ver_itinerario().ver_ciudad_destino().nombre
+    fecha_venta = datetime.datetime.now().date()
+    nueva_venta = Venta(fecha_venta,monto,localidad,medio_pago)           
+    ventas.agregar_venta(nueva_venta)
 
+    asiento = asientos[nro_asiento - 1]
     if asiento.ver_estado() != "libre":
         print(f"Error: El asiento {nro_asiento} no está disponible.")
         return
-
     asiento._cambiar_estado_asiento("reservado")
     reserva = Reserva(pasajero, asiento)
     print(f"Reserva realizada: Pasajero {pasajero.nombre}, asiento {nro_asiento}, servicio del {servicio.ver_fecha_partida().strftime('%d/%m/%Y')}")
+
+
+
+
+
 
 # Provincias
 santa_fe = Provincia(1, "Santa Fe")
@@ -350,14 +433,13 @@ servicio4 = Servicio(
 mostrar_servicio(servicio1, 1)
 mostrar_servicio(servicio2, 2)
 mostrar_servicio(servicio3, 3)
-
 mostrar_servicio(servicio4, 4)
-
 mostrar_servicio(servicio4, 4)
 
 #Seleccionar servivico
+ventas =Ventas()
 servicios = [servicio1, servicio2, servicio3, servicio4]
-servicio_seleccionado = seleccionar_servicio(servicios)
+servicio_seleccionado = seleccionar_servicio(servicios,ventas)
 
 #Mostrar asientos
 mostrar_asientos(servicio_seleccionado.ver_unidad())
@@ -369,6 +451,12 @@ pasajero1 = Pasajero("Larocca Ignacio", "laroccanacho@gmail.com", "45338215")
 asiento = int(input("Seleccione un asiento : "))
 reservar_asiento(servicio_seleccionado, pasajero1, asiento)
 mostrar_asientos(servicio_seleccionado.ver_unidad())
+
+#Informe
+fecha_desde= date(2025,1,1)
+fecha_hasta= date(2025,12,31)
+ventas.generar_informe(fecha_desde,fecha_hasta)
+
 
 #Numero inválido
 reservar_asiento(servicio_seleccionado, pasajero1, 99)
